@@ -142,6 +142,12 @@ class Trainer(metaclass=ABCMeta):
                 self.node_models[node_type][component].set_feature_index(feature_index)
 
     def process(self, data, power_labels, pipeline_lock):
+        if  not all(feature in data.columns for feature in self.features):
+            self.print_log(f"feature_group_name: {self.feature_group_name}, feature_group: {self.feature_group}")
+            self.print_log(f"corresponding features of the feature_group : {self.features}")
+            self.print_log("Not all features are present in the data columns, modify features")
+            self.features = [feature for feature in self.features if feature in data.columns]
+            self.print_log(f"features after modifying: {self.features}")
         node_types = pd.unique(data[node_info_column])
         for node_type in node_types:
             node_type = int(node_type)
