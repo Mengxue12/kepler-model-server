@@ -17,7 +17,7 @@ COUNTER_FEAUTRES = ["cache_miss", "cpu_cycles", "cpu_instructions"]
 BPF_FEATURES = ["bpf_cpu_time_ms", "bpf_page_cache_hit"]
 IRQ_FEATURES = ["bpf_block_irq", "bpf_net_rx_irq", "bpf_net_tx_irq"]
 ACCELERATE_FEATURES = ["accelerator_intel_qat"]
-WORKLOAD_FEATURES = COUNTER_FEAUTRES + BPF_FEATURES + IRQ_FEATURES + ACCELERATE_FEATURES
+WORKLOAD_FEATURES = COUNTER_FEAUTRES + BPF_FEATURES + IRQ_FEATURES #+ ACCELERATE_FEATURES
 BASIC_FEATURES = COUNTER_FEAUTRES + BPF_FEATURES
 
 PowerSourceMap = {
