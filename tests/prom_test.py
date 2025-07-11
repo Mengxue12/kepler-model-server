@@ -26,6 +26,7 @@ def get_prom_response(save_path=prom_output_path, save_name=prom_output_filename
 
 def get_query_results(save_path=prom_output_path, save_name=prom_output_filename):
     response = get_prom_response(save_path=save_path, save_name=save_name)
+    print("get json query results from path:", save_path, "filename:", save_name) 
     return prom_responses_to_results(response)
 
 
