@@ -2,8 +2,10 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
+# pd.set_option("display.max_columns", None)
 
 from kepler_model.train.extractor.preprocess import drop_zero_column, find_correlations
+from kepler_model.train.extractor.extract_meter_power import extract_meter_power
 from kepler_model.util.extract_types import (
     accelerator_type_colname,
     component_to_col,
@@ -88,29 +90,49 @@ class DefaultExtractor(Extractor):
         return "default"
 
     # implement extract function
-    def extract(self, query_results, energy_components, feature_group, energy_source, node_level, aggr=True):
+    def extract(self, query_results, energy_components, feature_group, energy_source, node_level, aggr=True, meter_data_path=None):
         # 1. compute energy different per timestamp and concat all energy component and unit
-        power_data = self.get_power_data(query_results, energy_components, energy_source)
+        power_data = self.get_power_data(query_results, energy_components, energy_source) # power data is one row less than query_results
         if power_data is None:
-            return None, None, None, None
+            return None, None, None, None, None
         power_data = drop_zero_column(power_data, power_data.columns)
         power_columns = power_data.columns
+        print("power_columns:", power_columns)
+        print(f"power_data from energy source: {energy_source} \n{power_data}")
+        print("number of recorded power data:", len(power_data))
+        if not node_level:
+            meter_data_path = None
+        if meter_data_path is not None:
+            # use meter data if available
+            print("Using meter data from", meter_data_path)
+            meter_power_data = extract_meter_power(meter_data_path)
+            if meter_power_data is None or len(meter_power_data) == 0:
+                print("No meter data found in", meter_data_path)
+            print("number of recorded power data:", len(meter_power_data))
+            print("meter power columns:", meter_power_data.columns)
+            print("meter_power_data:\n", meter_power_data)
+        else:
+            meter_power_data = None
         fg = FeatureGroup[feature_group]
         features = FeatureGroups[fg]
+        print("features", features)
+
         # 2. separate workload and system
         workload_features = [feature for feature in features if feature not in SYSTEM_FEATURES]
         system_features = [feature for feature in features if feature in SYSTEM_FEATURES]
         # 3. compute aggregated utilization different per timestamp and concat them
         if fg == FeatureGroup.AcceleratorOnly and node_level is not True:
-            return None, None, None, None
+            return None, None, None, None, None
         else:
-            feature_data, workload_features = self.get_workload_feature_data(query_results, workload_features)
+            feature_data, workload_features = self.get_workload_feature_data(query_results, workload_features)# of all containers - number of rows: number of containers * number of timestamps
 
         if feature_data is None:
-            return None, None, None, None
+            return None, None, None, None, None
+        print("feature_data\n", feature_data) 
 
         # join power
-        feature_power_data = feature_data.set_index(TIMESTAMP_COL).join(power_data).sort_index().dropna()
+        print(f"Join the feature data with power data from {energy_source} by timestamp...")
+        feature_power_data = feature_data.set_index(TIMESTAMP_COL).join(power_data).sort_index().dropna() # here drop the first row
 
         # aggregate data if needed
         is_aggr = node_level and aggr
@@ -120,7 +142,28 @@ class DefaultExtractor(Extractor):
             mean_power = feature_power_data.groupby([TIMESTAMP_COL])[power_columns].mean()
             feature_power_data = sum_feature.join(mean_power)
         else:
-            feature_power_data = feature_power_data.groupby([TIMESTAMP_COL, container_id_colname]).sum()
+            feature_power_data = feature_power_data.groupby([TIMESTAMP_COL, container_id_colname])[workload_features + list(power_columns)].sum()
+
+        if meter_power_data is not None:
+            # the feature and power already drop the first row
+            print("Join the feature data with power data from meter by timestamp...")
+            # power_columns = list(power_columns) + list(meter_power_data.columns)
+            feature_data = feature_data.groupby([TIMESTAMP_COL])[workload_features].sum()
+            # time_diff_values = feature_data.reset_index()[[TIMESTAMP_COL]].diff().dropna().values.mean()
+            meter_power_data = meter_power_data[(meter_power_data.index >= feature_data.index[0]) & (meter_power_data.index <= feature_data.index[-1])]
+            first_row = meter_power_data.iloc[:1]
+            power_data_index = meter_power_data.iloc[1:].iloc[2::3].index
+            meter_power_data = meter_power_data.iloc[1:].groupby(np.arange(len(meter_power_data) - 1) // 3).mean()
+            meter_power_data.index = power_data_index
+            meter_power_data = pd.concat([first_row, meter_power_data]) 
+            missing_idx = meter_power_data.index.difference(feature_data.index)
+            if len(missing_idx) > 0:
+                print("Rows in meter_power_data but not in feature_data:\n", meter_power_data.loc[missing_idx])
+                meter_power_data = meter_power_data.loc[meter_power_data.index.intersection(feature_data.index)]
+            feature_power_data = feature_power_data.join(meter_power_data) # left join
+            print(f"feature_power_data after aggregated with {energy_source} and meter by timestamp:\n", feature_power_data)
+        else:
+            print(f"feature_power_data after aggregated with {energy_source} by timestamp:\n", feature_power_data)
 
         # 4. add system features (non aggregated data)
         if len(system_features) > 0:
@@ -139,9 +182,14 @@ class DefaultExtractor(Extractor):
 
         # 6. validate input with correlation
         corr = find_correlations(energy_source, feature_power_data, power_columns, workload_features)
+        if meter_data_path is not None:
+            corr_meter = find_correlations("meter", feature_power_data, meter_power_data.columns, workload_features)
         # 7. apply utilization ratio to each power unit because the power unit is summation of all container utilization
-        feature_power_data = append_ratio_for_pkg(feature_power_data, is_aggr, query_results, power_columns)
-        return feature_power_data, power_columns, corr, workload_features
+        # feature_power_data = append_ratio_for_pkg(feature_power_data, is_aggr, query_results, power_columns)
+        print("correlation matrix:\n", corr)
+        if meter_data_path is not None:
+            return feature_power_data, power_columns, [corr, corr_meter], workload_features, feature_data
+        return feature_power_data, power_columns, corr, workload_features, feature_data
 
     def get_workload_feature_data(self, query_results, features):
         feature_data = None
@@ -156,7 +204,12 @@ class DefaultExtractor(Extractor):
                 return None
             if len(query_results[query]) == 0:
                 print("no data in ", query)
-                return None
+                feature_to_remove.append(feature)
+                continue
+            if (query_results[query][query] == 0).all().all():
+                print("all values in query", query, "are 0")
+                feature_to_remove.append(feature)
+                continue
             aggr_query_data = query_results[query].copy()
 
             if all(col in aggr_query_data.columns for col in container_id_cols):
@@ -164,6 +217,7 @@ class DefaultExtractor(Extractor):
                 aggr_query_data[container_id_colname] = aggr_query_data[container_id_cols].apply(lambda x: "/".join([str(xi) for xi in x]), axis=1)
                 # separate for each container_id
                 container_id_list = pd.unique(aggr_query_data[container_id_colname])
+                print("number of containers:", len(container_id_list), "for feature", feature)
 
                 for container_id in container_id_list:
                     container_df = aggr_query_data[aggr_query_data[container_id_colname] == container_id]
@@ -208,9 +262,16 @@ class DefaultExtractor(Extractor):
         feature_data = pd.concat(sum_df_list)
         # fill empty timestamp
         feature_data.fillna(0, inplace=True)
+        for feature in features:
+            if feature not in feature_to_remove:
+                if (feature_data[feature] == 0).all():
+                    print("all values of feature", feature, "are 0")
+                    feature_to_remove.append(feature)
         # update feature
+        print("feature_to_remove:", feature_to_remove)
         if len(feature_to_remove) != 0:
             features = self.process_feature(features, feature_to_remove, cur_accelerator_features)
+        print("The number of containers that only have 0 values for all the features: ", len([container_df for container_df in container_df_list if (container_df[features] == 0).all().all()]))
         # return with reset index for later aggregation
         return feature_data.reset_index(), features
 
@@ -234,6 +295,7 @@ class DefaultExtractor(Extractor):
         for component in energy_components:
             unit_col = get_energy_unit(component)  # such as package
             query = energy_component_to_query(component)
+            print(f"Querying power data {query} for component: {component}")
             if query not in query_results:
                 print(query, "not in", query_results)
                 return None
@@ -275,6 +337,7 @@ class DefaultExtractor(Extractor):
             else:
                 # sum over mode
                 aggr_query_data = aggr_query_data.groupby([TIMESTAMP_COL]).sum()
+                print("the shape of aggr_query_data after grouping by timestamp:", aggr_query_data.shape)
                 time_diff_values = aggr_query_data.reset_index()[[TIMESTAMP_COL]].diff().dropna().values.mean()
                 # rename
                 colname = component_to_col(component)

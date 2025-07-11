@@ -26,7 +26,8 @@ PowerSourceMap = {
     "acpi": ["platform"],
     "hmc": ["platform"],
     "redfish": ["platform"],
-    "trained_power_model": ["package", "core", "uncore", "dram"]
+    "trained_power_model": ["platform"],
+    "meter": ["platform"]
 }
 
 PACKAGE_ENERGY_COMPONENT_LABEL = ["package"]
