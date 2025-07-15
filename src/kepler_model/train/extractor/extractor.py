@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
 # pd.set_option("display.max_columns", None)
+# pd.set_option("display.max_rows", None)
 
 from kepler_model.train.extractor.preprocess import drop_zero_column, find_correlations
 from kepler_model.train.extractor.extract_meter_power import extract_meter_power
@@ -91,6 +92,7 @@ class DefaultExtractor(Extractor):
 
     # implement extract function
     def extract(self, query_results, energy_components, feature_group, energy_source, node_level, aggr=True, meter_data_path=None):
+        print("Extracting data with DefaultExtractor for feature group:", feature_group, "energy source:", energy_source, "energy components:", energy_components, "node_level:", node_level, "meter_data_path:", meter_data_path)
         # 1. compute energy different per timestamp and concat all energy component and unit
         power_data = self.get_power_data(query_results, energy_components, energy_source) # power data is one row less than query_results
         if power_data is None:
@@ -98,19 +100,19 @@ class DefaultExtractor(Extractor):
         power_data = drop_zero_column(power_data, power_data.columns)
         power_columns = power_data.columns
         print("power_columns:", power_columns)
-        print(f"power_data from energy source: {energy_source} \n{power_data}")
+        # if node_level:
+        #     print(f"power_data from energy source: {energy_source} \n{power_data}")
         print("number of recorded power data:", len(power_data))
         if not node_level:
             meter_data_path = None
         if meter_data_path is not None:
             # use meter data if available
-            print("Using meter data from", meter_data_path)
             meter_power_data = extract_meter_power(meter_data_path)
             if meter_power_data is None or len(meter_power_data) == 0:
                 print("No meter data found in", meter_data_path)
-            print("number of recorded power data:", len(meter_power_data))
+            print("number of recorded meter power data:", len(meter_power_data))
             print("meter power columns:", meter_power_data.columns)
-            print("meter_power_data:\n", meter_power_data)
+            # print("meter_power_data:\n", meter_power_data)
         else:
             meter_power_data = None
         fg = FeatureGroup[feature_group]
@@ -128,7 +130,8 @@ class DefaultExtractor(Extractor):
 
         if feature_data is None:
             return None, None, None, None, None
-        print("feature_data\n", feature_data) 
+        if node_level:
+            print("feature_data\n", feature_data) 
 
         # join power
         print(f"Join the feature data with power data from {energy_source} by timestamp...")
@@ -162,7 +165,7 @@ class DefaultExtractor(Extractor):
                 meter_power_data = meter_power_data.loc[meter_power_data.index.intersection(feature_data.index)]
             feature_power_data = feature_power_data.join(meter_power_data) # left join
             print(f"feature_power_data after aggregated with {energy_source} and meter by timestamp:\n", feature_power_data)
-        else:
+        elif node_level:
             print(f"feature_power_data after aggregated with {energy_source} by timestamp:\n", feature_power_data)
 
         # 4. add system features (non aggregated data)
@@ -186,7 +189,6 @@ class DefaultExtractor(Extractor):
             corr_meter = find_correlations("meter", feature_power_data, meter_power_data.columns, workload_features)
         # 7. apply utilization ratio to each power unit because the power unit is summation of all container utilization
         # feature_power_data = append_ratio_for_pkg(feature_power_data, is_aggr, query_results, power_columns)
-        print("correlation matrix:\n", corr)
         if meter_data_path is not None:
             return feature_power_data, power_columns, [corr, corr_meter], workload_features, feature_data
         return feature_power_data, power_columns, corr, workload_features, feature_data
@@ -260,13 +262,15 @@ class DefaultExtractor(Extractor):
 
         sum_df_list = container_df_list + accelerator_df_list
         feature_data = pd.concat(sum_df_list)
+
         # fill empty timestamp
         feature_data.fillna(0, inplace=True)
         for feature in features:
             if feature not in feature_to_remove:
                 if (feature_data[feature] == 0).all():
+                    # this feature is not remove before because the accumulated value from the query are not 0
                     print("all values of feature", feature, "are 0")
-                    feature_to_remove.append(feature)
+                    # feature_to_remove.append(feature)
         # update feature
         print("feature_to_remove:", feature_to_remove)
         if len(feature_to_remove) != 0:
@@ -297,12 +301,13 @@ class DefaultExtractor(Extractor):
             query = energy_component_to_query(component)
             print(f"Querying power data {query} for component: {component}")
             if query not in query_results:
-                print(query, "not in", query_results)
+                print(query, "not in query_results")
                 return None
             aggr_query_data = query_results[query].copy()
             # filter source
             aggr_query_data = aggr_query_data[aggr_query_data[SOURCE_COL] == source]
             if len(aggr_query_data) == 0:
+                print(f"No data found for {query} with source {source}")
                 return None
             if unit_col is not None:
                 if usage_ratio_query not in query_results:

@@ -12,6 +12,7 @@ transforms the time to timestamp
 from datetime import datetime, timezone
 import pandas as pd
 import argparse
+import os
 from kepler_model.util import (    assure_path,
     load_csv,
     save_csv,
@@ -25,6 +26,9 @@ def meter_time_to_utc(meter_time, saved_time, saved_timestamp):
 
 # saved_path = "path-to-data/utc-time"
 def extract_meter_power(saved_path):
+    if os.path.exists(f"{saved_path}-timestamp.csv"):
+        print("extract_meter_power: File already exists, skipping extraction.")
+        return pd.read_csv(f"{saved_path}-timestamp.csv", index_col=0)[["meter-platform_power"]]
     power_data_path = f"{saved_path}.xlsx"
     saved_date = saved_path.split("/")[-1]
     power_data = pd.read_excel(power_data_path, index_col=0, skiprows=4)
@@ -37,9 +41,9 @@ def extract_meter_power(saved_path):
     power_data.index.name = "timestamp"
     # Calculate power from current and voltage
     print("extract_meter_power: Calculating platform power from voltage and current...")
-    power_data["meter_platform_power"] = power_data["  Voltage  (V)"] * power_data["  Current  (A)"]
+    power_data["meter-platform_power"] = power_data["  Voltage  (V)"] * power_data["  Current  (A)"]
     power_data.to_csv(power_data_path.replace('.xlsx', '-timestamp.csv'))
-    return power_data[["meter_platform_power"]]
+    return power_data[["meter-platform_power"]]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Extract meter power data from CSV file.")

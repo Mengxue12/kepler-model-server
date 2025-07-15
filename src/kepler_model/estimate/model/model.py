@@ -166,6 +166,7 @@ def load_model(model_path):
 
     metadata["model_path"] = model_path
     metadata_str = json.dumps(metadata)
+    print("Loading model from metadata:", metadata_str)
     try:
         model = json.loads(metadata_str, object_hook=lambda d: Model(**d))
         return model

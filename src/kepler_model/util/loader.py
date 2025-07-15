@@ -72,6 +72,7 @@ def load_json(path: str, name: str):
 
     filepath = os.path.join(path, name)
     try:
+        print(f"loading json from {filepath}")
         with open(filepath) as f:
             res = json.load(f)
         return res
@@ -87,6 +88,7 @@ def load_pkl(path: str, name: str):
     filepath = os.path.join(path, name)
     try:
         res = joblib.load(filepath)
+        print(f"Successfully load pkl file from {filepath}")
         return res
     except FileNotFoundError:
         return None
@@ -149,6 +151,7 @@ def load_csv(path, name):
     csv_file = name + ".csv"
     file_path = os.path.join(path, csv_file)
     try:
+        print(f"loading csv from {file_path}...")
         data = pd.read_csv(file_path)
         data = data.apply(pd.to_numeric, errors="ignore")
         return data
