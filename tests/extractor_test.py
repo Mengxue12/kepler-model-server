@@ -48,12 +48,18 @@ def get_filename(extractor_name, feature_group, node_name, node_level, meter_dat
 
 def get_extract_result(extractor_name, feature_group, node_name, node_level, save_path=extractor_output_path, meter_data_date=None):
     filename = get_filename(extractor_name, feature_group, node_name, node_level, meter_data_date=meter_data_date)
+    file_path = os.path.join(save_path, filename + ".csv")
+    print("get_extract_result: Loading extract result from", file_path)
+    if not os.path.exists(file_path):
+        print(f"get_extract_result: File {filename} does not exist. Returning None.")
+        return None
     return load_csv(save_path, filename)
 
 
 def get_extract_results(extractor_name, node_name, node_level, save_path=extractor_output_path, meter_data_date=None):
     all_results = dict()
     for feature_group in all_feature_groups:
+        print("get_extract_results: Getting extract result for feature group:", feature_group)
         result = get_extract_result(extractor_name, feature_group, node_name, node_level, save_path=save_path, meter_data_date=meter_data_date)
         if result is not None:
             all_results[feature_group] = result
@@ -61,7 +67,6 @@ def get_extract_results(extractor_name, node_name, node_level, save_path=extract
 
 
 def save_extract_results(instance, feature_group, extracted_data, node_name, node_level, save_path=extractor_output_path, meter_data_date=None):
-    assure_path(save_path)
     extractor_name = instance.__class__.__name__
     filename = get_filename(extractor_name, feature_group, node_name, node_level, meter_data_date=meter_data_date)
     print("saving extracted csv to ", save_path, filename)
@@ -98,12 +103,12 @@ def process(query_results, feature_group, node_name,
             num_of_unit=test_num_of_unit, 
             meter_data_path=None):
     energy_components = PowerSourceMap[energy_source]
-    print("extract arguments: \n feature_group:", feature_group, "\n save_path:", save_path, "\n customize_extractors:", customize_extractors, "\n energy_source:", energy_source, "\n num_of_unit:", num_of_unit, "\n meter_data_path:", meter_data_path)
+    print("process extract arguments: \n feature_group:", feature_group, "\n save_path:", save_path, "\n customize_extractors:", customize_extractors, "\n energy_source:", energy_source, "\n num_of_unit:", num_of_unit, "\n meter_data_path:", meter_data_path)
     global test_extractors
     for extractor_name in customize_extractors:
         test_extractors += [load_class("extractor", extractor_name)]
     for test_instance in test_extractors:
-        print("extractor:", test_instance.get_name())
+        print("Extractor:", test_instance.get_name())
         meter_data_date = None
         if meter_data_path is not None:
             meter_data_date = meter_data_path.split("/")[-1].split(".")[0]
