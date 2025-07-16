@@ -151,13 +151,14 @@ def test_extractor_process(
     print("valid feature groups:", valid_feature_groups)
     for fg in valid_feature_groups:
         feature_group = fg.name
+        if feature_group not in ['WorkloadOnly', 'CounterOnly']:
+            continue  # TODO only test workload and cpu features for now
         print('='*10, "feature_group:", feature_group, '='*10)
         process(
             query_results, feature_group, node_name,
             save_path=save_path,  
             energy_source=energy_source,
             meter_data_path=meter_data_path)
-        break
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run extractor tests.")

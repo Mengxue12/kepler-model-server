@@ -19,6 +19,7 @@ IRQ_FEATURES = ["bpf_block_irq", "bpf_net_rx_irq", "bpf_net_tx_irq"]
 ACCELERATE_FEATURES = ["accelerator_intel_qat"]
 WORKLOAD_FEATURES = COUNTER_FEAUTRES + BPF_FEATURES + IRQ_FEATURES #+ ACCELERATE_FEATURES
 BASIC_FEATURES = COUNTER_FEAUTRES + BPF_FEATURES
+CPU_FEATURES = ["cache_miss", "cpu_cycles", "cpu_instructions", "bpf_cpu_time_ms"]
 
 PowerSourceMap = {
     "rapl-sysfs": ["package", "core", "uncore", "dram"],
@@ -27,7 +28,7 @@ PowerSourceMap = {
     "hmc": ["platform"],
     "redfish": ["platform"],
     "trained_power_model": ["platform"],
-    "meter": ["platform"]
+    "meter": ["meter-platform"]
 }
 
 PACKAGE_ENERGY_COMPONENT_LABEL = ["package"]
@@ -85,7 +86,7 @@ def deep_sort(elements):
 FeatureGroups = {
     FeatureGroup.Full: deep_sort(WORKLOAD_FEATURES + SYSTEM_FEATURES),
     FeatureGroup.WorkloadOnly: deep_sort(WORKLOAD_FEATURES),
-    FeatureGroup.CounterOnly: deep_sort(COUNTER_FEAUTRES),
+    FeatureGroup.CounterOnly: deep_sort(CPU_FEATURES), # only CPU features
     FeatureGroup.BPFOnly: deep_sort(BPF_FEATURES),
     FeatureGroup.BPFIRQ: deep_sort(BPF_FEATURES + IRQ_FEATURES),
     FeatureGroup.CounterIRQCombined: deep_sort(COUNTER_FEAUTRES + IRQ_FEATURES),
