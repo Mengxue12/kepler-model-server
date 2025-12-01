@@ -22,7 +22,7 @@ from kepler_model.util import (
 from kepler_model.util.extract_types import component_to_col
 from kepler_model.util.prom_types import node_info_column
 from kepler_model.util.train_types import all_feature_groups
-from tests.prom_test import get_query_results, prom_output_path, prom_output_filename
+from prom_test import get_query_results, prom_output_path, prom_output_filename
 import argparse
 
 data_path = os.path.join(os.path.dirname(__file__), "data")
