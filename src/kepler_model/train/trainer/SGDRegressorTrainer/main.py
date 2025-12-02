@@ -9,5 +9,5 @@ class SGDRegressorTrainer(ScikitTrainer):
         self.fe_files = []
 
     def init_model(self):
-        return SGDRegressor(max_iter=1000)
+        return SGDRegressor(max_iter=1000, random_state=42)
 
