@@ -306,6 +306,7 @@ class DefaultExtractor(Extractor):
             aggr_query_data = query_results[query].copy()
             # filter source
             aggr_query_data = aggr_query_data[aggr_query_data[SOURCE_COL] == source]
+            print(f"the sources for query {query}: {aggr_query_data[SOURCE_COL].unique()}")
             if len(aggr_query_data) == 0:
                 print(f"No data found for {query} with source {source}")
                 return None
