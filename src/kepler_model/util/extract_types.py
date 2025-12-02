@@ -22,6 +22,7 @@ def component_to_col(component, unit_col=None, unit_val=None):
 def col_to_component(component_col):
     splits = component_col.split("_")
     component = splits[-2:][0]
+    print("component:", component, "splits:", splits)
     if component == "dynamic" or component == "background":
         return splits[-3:][0]
     return component
