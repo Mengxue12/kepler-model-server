@@ -94,7 +94,7 @@ class DefaultExtractor(Extractor):
     def extract(self, query_results, energy_components, feature_group, energy_source, node_level, aggr=True, meter_data_path=None):
         print("Extracting data with DefaultExtractor for feature group:", feature_group, "energy source:", energy_source, "energy components:", energy_components, "node_level:", node_level, "meter_data_path:", meter_data_path)
         # 1. compute energy different per timestamp and concat all energy component and unit
-        power_data = self.get_power_data(query_results, energy_components, energy_source) # power data is one row less than query_results
+        power_data = self.get_power_data(query_results, energy_components, energy_source, node_level) # power data is one row less than query_results # 20250915: if node_level is false, shouldn't be the same power data!!
         if power_data is None:
             return None, None, None, None, None
         power_data = drop_zero_column(power_data, power_data.columns)
@@ -125,7 +125,7 @@ class DefaultExtractor(Extractor):
         # 3. compute aggregated utilization different per timestamp and concat them
         if fg == FeatureGroup.AcceleratorOnly and node_level is not True:
             return None, None, None, None, None
-        else:
+        else: # elif not node_level: # TODO 20250915 node level should get node level workload_features resource usage not container level resource usage
             feature_data, workload_features = self.get_workload_feature_data(query_results, workload_features)# of all containers - number of rows: number of containers * number of timestamps
 
         if feature_data is None:

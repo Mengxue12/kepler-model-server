@@ -65,11 +65,15 @@ def feature_to_query(feature):
         return f"{node_query_prefix}_{feature}"
     if FeatureGroup.ThirdParty in FeatureGroups is not None and feature in FeatureGroups[FeatureGroup.ThirdParty]:
         return feature
-    return f"{container_query_prefix}_{feature}_{container_query_suffix}"
+    return f"{container_query_prefix}_{feature}_{container_query_suffix}" # TODO 20250915 should seperate node and container feature
 
 
-def energy_component_to_query(component):
-    return f"{node_query_prefix}_{component}_{node_query_suffix}"
+def energy_component_to_query(component, node_level=True):
+    if node_level:
+        return f"{node_query_prefix}_{component}_{node_query_suffix}"
+    else:
+        return f"{container_query_prefix}_{component}_{node_query_suffix}"
+        # TODO 20250915 if process level
 
 
 def update_thirdparty_metrics(metrics):
