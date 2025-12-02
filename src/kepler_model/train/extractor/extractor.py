@@ -343,13 +343,13 @@ class DefaultExtractor(Extractor):
                 # sum over mode
                 aggr_query_data = aggr_query_data.groupby([TIMESTAMP_COL]).sum()
                 print("the shape of aggr_query_data after grouping by timestamp:", aggr_query_data.shape)
-                time_diff_values = aggr_query_data.reset_index()[[TIMESTAMP_COL]].diff().dropna().values.mean()
+                time_diff_values = aggr_query_data.reset_index()[[TIMESTAMP_COL]].diff().dropna().values
                 # rename
                 colname = component_to_col(component)
                 aggr_query_data.rename(columns={query: colname}, inplace=True)
                 # find current value from aggregated query
                 df = aggr_query_data.sort_index()[colname].diff().dropna()
-                df /= time_diff_values
+                df /= time_diff_values.ravel()
                 df = df.mask(df.lt(0)).ffill().fillna(0).convert_dtypes()
                 power_data_list += [df]
         if len(power_data_list) == 0:
