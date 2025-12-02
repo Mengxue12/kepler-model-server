@@ -140,9 +140,10 @@ def query(args):
         item["startTimeUTC"] = start.strftime("%Y-%m-%dT%H:%M:%SZ")
         item["endTimeUTC"] = end.strftime("%Y-%m-%dT%H:%M:%SZ")
         save_json(path=data_path, name=benchmark_filename, data=item)
-        start = datetime.datetime.strptime(item["startTimeUTC"], "%Y-%m-%dT%H:%M:%SZ") - UTC_OFFSET_TIMEDELTA
+        start = datetime.datetime.strptime(item["startTimeUTC"], "%Y-%m-%dT%H:%M:%SZ") - UTC_OFFSET_TIMEDELTA # transform to local time to send to prometheus server
         end = datetime.datetime.strptime(item["endTimeUTC"], "%Y-%m-%dT%H:%M:%SZ") - UTC_OFFSET_TIMEDELTA
 
+    print("get metrics from prometheus server", args.server)
     available_metrics = prom.all_metrics()
 
     queries = None
@@ -159,9 +160,9 @@ def query(args):
     if args.to_csv:
         save_query_results(data_path, args.output, response)
     # try validation if applicable
-    validate_df = get_validate_df(data_path, benchmark_filename, response)
-    summary_validation(validate_df)
-    save_csv(path=data_path, name=args.output + "_validate_result", data=validate_df)
+    # validate_df = get_validate_df(data_path, benchmark_filename, response)
+    # summary_validation(validate_df)
+    # save_csv(path=data_path, name=args.output + "_validate_result", data=validate_df)
 
 
 """
