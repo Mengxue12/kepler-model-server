@@ -189,7 +189,9 @@ class Trainer(metaclass=ABCMeta):
         power_label = component_to_col(component)
         related_labels = [label for label in power_labels if power_label in label]
         unit_vals = get_unit_vals(power_labels)
+        self.print_log(f' power_label:{power_label}, unit_vals: {unit_vals}, related_labels:{related_labels}')
         if len(unit_vals) == 0:
+            self.print_log(f"no unit vals for {component}, no ratio applied")
             X_values = node_type_filtered_data[self.features].values
             y_values = node_type_filtered_data[related_labels].sum(axis=1)
             return X_values, y_values
