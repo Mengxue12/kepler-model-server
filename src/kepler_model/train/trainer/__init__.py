@@ -137,8 +137,9 @@ class Trainer(metaclass=ABCMeta):
                 # init if failed to load any checkpoint
                 self.node_models[node_type][component] = self.init_model()
                 self.print_log(f"Newly initialize model ({component})")
-            if hasattr(self.node_models[node_type][component], "set_feature_index"):
-                feature_index = main_feature(self.feature_group_name, component)
+            if hasattr(self.node_models[node_type][component], "set_feature_index"): # only for curvefit model
+                feature_index = main_feature(self.feature_group_name, component, self.features)
+                self.print_log(f"feature index: {feature_index}")
                 self.node_models[node_type][component].set_feature_index(feature_index)
 
     def process(self, data, power_labels, pipeline_lock):

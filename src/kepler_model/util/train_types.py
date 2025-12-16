@@ -110,6 +110,10 @@ default_main_feature_map = {
     FeatureGroup.CounterIRQCombined: "cpu_instructions",
     FeatureGroup.Basic: "cpu_instructions",
     FeatureGroup.AcceleratorOnly: "accelerator_intel_qat",
+    FeatureGroup.All7: "cpu_instructions",
+    FeatureGroup._6_tx: "cpu_instructions",
+    FeatureGroup._5_tx_irq: "cpu_instructions",
+    FeatureGroup._4_tx_irq_page: "cpu_instructions",
 }
 default_dram_feature_map = {
     FeatureGroup.Full: "cache_miss",
@@ -118,16 +122,22 @@ default_dram_feature_map = {
     FeatureGroup.BPFOnly: "bpf_page_cache_hit",
     FeatureGroup.BPFIRQ: "bpf_page_cache_hit",
     FeatureGroup.CounterIRQCombined: "cache_miss",
-    FeatureGroup.Basic: "cache_miss"
+    FeatureGroup.Basic: "cache_miss",
+    FeatureGroup.All7: "cache_miss",
+    FeatureGroup._6_tx: "cache_miss",
+    FeatureGroup._5_tx_irq: "cache_miss",
+    FeatureGroup._4_tx_irq_page: "cache_miss",
 }
 
-def main_feature(feature_group_name, energy_component):
+def main_feature(feature_group_name, energy_component, features = None):
     feature_group = FeatureGroup[feature_group_name]
-    features = FeatureGroups[feature_group]
+    if features is None:
+        features = FeatureGroups[feature_group]
     if energy_component == "dram" and feature_group in default_dram_feature_map:
         feature = default_dram_feature_map[feature_group]
     else:
         feature = default_main_feature_map[feature_group]
+    print("main_feature: ", feature_group, feature, features)
     return features.index(feature)
 
 
