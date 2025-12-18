@@ -56,29 +56,18 @@ def process_all(extractors=test_extractors, isolators=test_isolators, trainer_na
         for feature_group, result in extractor_results.items():
             print("Extractor ", extractor_name)
             metadata_df = process(True, feature_group, result, trainer_names=trainer_names, energy_source=energy_source, power_columns=power_columns, pipeline_name=pipeline_name)
-            metadata_df["extractor"] = extractor_name
-            metadata_df["feature_group"] = feature_group
-            abs_train_list += [metadata_df]
-
-        for isolator in isolators:
-            isolator_name = isolator.__class__.__name__
-            isolator_results = get_isolate_results(isolator_name, extractor_name)
-            for feature_group, result in isolator_results.items():
-                print("Isolator ", isolator_name)
-                metadata_df = process(False, feature_group, result, trainer_names=trainer_names, energy_source=energy_source, power_columns=power_columns, pipeline_name=pipeline_name)
-                metadata_df["extractor"] = extractor_name
-                metadata_df["isolator"] = isolator_name
-                metadata_df["feature_group"] = feature_group
-                dyn_train_list += [metadata_df]
-    abs_train_df = pd.concat(abs_train_list)
-    dyn_train_df = pd.concat(dyn_train_list)
-    return abs_train_df, dyn_train_df
+    return metadata_df
 
 
-def test_trainer_process():
-    focus_columns = ["model_name", "mae"]
-    abs_train_df, dyn_train_df = process_all()
-    print("Node-level train results:")
-    print(abs_train_df.set_index(["extractor", "feature_group"])[focus_columns].sort_values(by=["mae"], ascending=True))
-    print("Container-level train results:")
-    print(dyn_train_df.set_index(["extractor", "isolator", "feature_group"])[focus_columns].sort_values(by=["mae"], ascending=True))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Trainer Test")
+    parser.add_argument("--dataset_path", type=str, help="Path of dataset", default="ready_4_train")
+    parser.add_argument("--energy_source", type=str, help="Energy source", default='meter')
+    parser.add_argument("--cross_validation", action='store_true', help="Cross validation", default=False)
+    parser.add_argument("--feature_group", type=str, help="Feature group: All7, _6_tx, _5_tx_irq, _4_tx_irq_page", default="All7")
+
+    args = parser.parse_args()
+
+    save_path = os.path.join(data_path, args.dataset_path)
+    abs_train_df = process_all(energy_source=args.energy_source, feature_group=args.feature_group, save_path=save_path, cross_validation=args.cross_validation)
+    print('trainer results:', abs_train_df[["model_name","mae","mape"]].sort_values(by=["mae","mape"], ascending=[True,True]))
